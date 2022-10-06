@@ -1,13 +1,25 @@
-# a_snippet_a_day
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 
-A project where you basically get code snippets.
+use super::models::*;
+use futures::stream::TryStreamExt;
+use mongodb::{options::InsertOneOptions, Client, Collection, Database};
 
-Snippets are stored in a mongodb database, and are served to the user via a REST API.
-the "snippets" collection of the database is structured into Snippet Groups which hold info about the group and the snippets in it.
+pub async fn get_db() -> Database {
+    let client = Client::with_uri_str("mongodb://127.0.0.1:27017")
+        .await
+        .unwrap();
+    client.database("a_snippet_a_day")
+}
 
-For example
-```
-SnippetGroup::new(
+pub async fn test() {
+    let client = Client::with_uri_str("mongodb://127.0.0.1:27017")
+        .await
+        .unwrap();
+    let database = client.database("a_snippet_a_day");
+    let coll = database.collection::<SnippetGroup>("snippets");
+
+    coll.insert_one(
+        &SnippetGroup::new(
             "Test group".to_string(),
             "First test".to_string(),
             vec![
@@ -47,5 +59,23 @@ SnippetGroup::new(
                     .to_string(),
                 ),
             ],
-        )
-```
+        ),
+        InsertOneOptions::default(),
+    )
+    .await
+    .unwrap();
+}
+
+pub async fn insert_snippet_group(snippet_group: SnippetGroup) -> mongodb::error::Result<()> {
+    get_db()
+        .await
+        .collection("snippets")
+        .insert_one(snippet_group, None)
+        .await?;
+    Ok(())
+}
+
+pub async fn get_snippet_groups(coll: &Collection<SnippetGroup>) -> Vec<SnippetGroup> {
+    let mut cursor = coll.find(None, None).await.unwrap();
+    cursor.try_collect().await.unwrap()
+}

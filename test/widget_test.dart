@@ -13,7 +13,7 @@ import 'package:a_snippet_a_day/Main.dart';
 void main() {
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const ASnippetADay());
+    await tester.pumpWidget(ASnippetADay(theme: ThemeData.dark()));
 
     // Verify that our counter starts at 0.
     expect(find.text('0'), findsOneWidget);

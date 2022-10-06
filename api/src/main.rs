@@ -1,34 +1,42 @@
 use actix_cors::*;
 use actix_web::{web::Json, *};
-use http::header::ContentType;
-use serde::{Deserialize, Serialize};
-
 use docker_api::{
     self,
     opts::{ContainerListOpts, ImageListOpts},
 };
+use http::header::ContentType;
+use rand::seq::SliceRandom;
+use serde::{Deserialize, Serialize};
 
-#[get("/")]
-async fn index() -> &'static str {
-    "Hello cunt"
+mod lib;
+use lib::{models::*, *};
+
+#[get("/snippet")]
+async fn snippet() -> HttpResponse {
+    match serde_json::to_string(
+        db::get_snippet_groups(&db::get_db().await.collection("snippets"))
+            .await
+            .choose(&mut rand::thread_rng())
+            .unwrap(),
+    ) {
+        Ok(s) => HttpResponse::Ok().content_type("application/json").body(s),
+        Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
+    }
 }
 
-#[get("/run")]
-async fn python() -> &'static str {
-    "fart"
+// dont deploy this ;)
+#[post("/insert")]
+async fn insert(sg: Json<SnippetGroup>) -> HttpResponse {
+    match db::insert_snippet_group(sg.0).await {
+        Ok(_) => HttpResponse::Ok().body("Success"),
+        Err(e) => HttpResponse::InternalServerError().body(format!("{:?}", e)),
+    }
 }
 
-#[post("/cmd")]
-async fn test(echo: String) -> HttpResponse {
-    let args: Vec<&str> = echo.split(' ').collect();
-
-    let out = std::process::Command::new(args[0])
-        .args(&args[1..])
-        .output()
-        .unwrap();
-    HttpResponse::Ok()
-        .content_type(ContentType::plaintext())
-        .body(out.stdout)
+#[get("/test")]
+async fn test() -> HttpResponse {
+    db::test().await;
+    HttpResponse::Ok().body("Test")
 }
 
 #[actix_web::main]
@@ -38,8 +46,8 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(Cors::permissive())
             .wrap(logger)
-            .service(index)
-            .service(python)
+            .service(snippet)
+            .service(insert)
             .service(test)
     })
     .bind(("127.0.0.1", 8000))?

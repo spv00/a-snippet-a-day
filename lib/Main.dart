@@ -11,7 +11,7 @@ void main() async {
   final themeStr = await rootBundle.loadString('assets/theme.json');
   final themeJson = jsonDecode(themeStr);
   final theme = ThemeDecoder.decodeThemeData(themeJson)!;
-  runApp(ASnippetADay(theme: theme));
+  runApp(ASnippetADay(theme: ThemeData.dark()));
 }
 
 class ASnippetADay extends StatelessWidget {

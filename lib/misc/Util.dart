@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../models/snippets.dart';
+import '../models/Snippets.dart';
 import 'LangIcons.dart';
+import 'package:highlight/languages/all.dart' as langs;
 
 
 class Util{
@@ -61,8 +62,23 @@ class Util{
       case Language.Haskell:{
         return LangIcons.haskell_plain;
       }
+      case Language.Bash:{
+        return LangIcons.bash_plain;
+      }
     }
-
     return Icons.question_mark;
+  }
+
+  // Patch lang names for syntax highligting
+  static String patch_lang_name(String lang){
+    switch (lang){
+      case "c":{
+        return "cpp";
+      }
+      case "html":{
+        return "xml";
+      }
+    }
+    return lang;
   }
 }

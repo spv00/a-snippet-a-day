@@ -26,56 +26,14 @@ pub async fn test() {
                 "This is 'Hello World!'".to_string(),
                 "In Rust, C and Python".to_string(),
             ],
-            vec![
-                Snippet::new(
-                    "Hello World in py".to_string(),
-                    Language::Python,
-                    r#"
-                    print("Hello World!")
-                    "#
-                    .to_string(),
-                ),
-                Snippet::new(
-                    "Hello World in C".to_string(),
-                    Language::C,
-                    r#"
-                    #include <stdio.h>
-
-                    int main() {
-                        printf("Hello World!");
-                        return 0;
-                    }
-                    "#
-                    .to_string(),
-                ),
-                Snippet::new(
-                    "Rust snippet".to_string(),
-                    Language::Rust,
-                    r#"
-                    fn main() {
-                        println!("Hello World!");
-                    }
-                    "#
-                    .to_string(),
-                ),
-            ],
+            vec![Snippet::new(
+                "Hello World in py".to_string(),
+                Language::Python,
+                "print(\"Hello World!\")".to_string(),
+            )],
         ),
         InsertOneOptions::default(),
     )
     .await
     .unwrap();
-}
-
-pub async fn insert_snippet_group(snippet_group: SnippetGroup) -> mongodb::error::Result<()> {
-    get_db()
-        .await
-        .collection("snippets")
-        .insert_one(snippet_group, None)
-        .await?;
-    Ok(())
-}
-
-pub async fn get_snippet_groups(coll: &Collection<SnippetGroup>) -> Vec<SnippetGroup> {
-    let mut cursor = coll.find(None, None).await.unwrap();
-    cursor.try_collect().await.unwrap()
 }

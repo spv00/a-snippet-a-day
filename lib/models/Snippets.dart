@@ -1,4 +1,5 @@
 enum Language {
+  Bash,
   Python,
   Rust,
   C,
@@ -57,6 +58,7 @@ class Snippet {
   Snippet(this.id, this.title, this.lang, this.code);
 
   factory Snippet.fromJson(dynamic json) {
+    print(json['lang']);
     return Snippet(json["id"] as int, json["title"] as String,
         Language.values.byName(json['lang']), json["code"] as String);
   }

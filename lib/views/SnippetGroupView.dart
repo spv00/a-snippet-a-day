@@ -1,4 +1,4 @@
-import 'package:a_snippet_a_day/models/snippets.dart';
+import 'package:a_snippet_a_day/models/Snippets.dart';
 import 'package:a_snippet_a_day/views/SnippetView.dart';
 import 'package:flutter/material.dart';
 
@@ -31,7 +31,6 @@ class _CodeSnippetView extends State<SnippetGroupView>{
         ], crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.max, mainAxisAlignment: MainAxisAlignment.spaceEvenly,),),
         Container(child: Column(children: [
           Text(widget.sg.explanation, style: Theme.of(context).textTheme.subtitle1,),
-          Divider(color: Theme.of(context).dividerColor,),
           for(var comment in widget.sg.comments)
             Text(comment, style: Theme.of(context).textTheme.caption,),
         ]), constraints: BoxConstraints(maxWidth: 200),)

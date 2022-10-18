@@ -1,6 +1,7 @@
 import 'package:a_snippet_a_day/models/Snippets.dart';
 import 'package:a_snippet_a_day/views/SnippetView.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 
 class SnippetGroupView extends StatefulWidget{
   final SnippetGroup sg;
@@ -30,7 +31,9 @@ class _CodeSnippetView extends State<SnippetGroupView>{
 
         ], crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.max, mainAxisAlignment: MainAxisAlignment.spaceEvenly,),),
         Container(child: Column(children: [
-          Text(widget.sg.explanation, style: Theme.of(context).textTheme.subtitle1,),
+          MarkdownBody(data: widget.sg.explanation),
+          //Text(widget.sg.explanation, style: Theme.of(context).textTheme.subtitle1,),
+          Divider(),
           for(var comment in widget.sg.comments)
             Text(comment, style: Theme.of(context).textTheme.caption,),
         ]), constraints: BoxConstraints(maxWidth: 200),)

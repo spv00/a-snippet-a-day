@@ -63,13 +63,19 @@ class Util{
         return LangIcons.haskell_plain;
       }
       case Language.Bash:{
-        return LangIcons.bash_plain;
+        return LangIcons.devicon_plain;
+      }
+      case Language.Markdown:{
+        return LangIcons.markdown_original;
+      }
+      case Language.All:{
+        return Icons.code;
       }
     }
     return Icons.question_mark;
   }
 
-  // Patch lang names for syntax highligting
+  // Patch lang names for syntax highlighting
   static String patch_lang_name(String lang){
     switch (lang){
       case "c":{

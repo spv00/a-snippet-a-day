@@ -1,15 +1,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use super::models::*;
-use futures::stream::TryStreamExt;
 use mongodb::{options::InsertOneOptions, Client, Collection, Database};
-
-pub async fn get_db() -> Database {
-    let client = Client::with_uri_str("mongodb://127.0.0.1:27017")
-        .await
-        .unwrap();
-    client.database("a_snippet_a_day")
-}
 
 pub async fn test() {
     let client = Client::with_uri_str("mongodb://127.0.0.1:27017")

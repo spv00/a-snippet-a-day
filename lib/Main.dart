@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:a_snippet_a_day/pages/CreateNewPage.dart';
 import 'package:a_snippet_a_day/pages/MainPage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -27,6 +28,7 @@ class ASnippetADay extends StatelessWidget {
       initialRoute: "/",
       routes: {
         "/": (context) => MainPage(),
+        "/create": (context) => CreateNewPage(),
       },
       theme: theme,
     );

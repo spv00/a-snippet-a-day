@@ -1,10 +1,55 @@
-use crate::db;
 use futures::stream::TryStreamExt;
-use mongodb::Collection;
+use mongodb::{Client, Collection, Database};
 use serde::{Deserialize, Serialize};
+use std::ops::DerefMut;
 
-// A group of Snippets that make up a working bit of code like client.js and server.c or something
-#[derive(Debug, Serialize, Deserialize, Default)]
+use crate::db;
+
+/// A group of Snippets that make up a working bit of code like client.js and server.c or something
+/// ```rust
+/// SnippetGroup::new(
+/// "Test group".to_string(),
+/// "First test".to_string(),
+/// vec![
+///     "This is 'Hello World!'".to_string(),
+///     "In Rust, C and Python".to_string(),
+/// ],
+/// vec![
+///     Snippet::new(
+///         "Hello World in py".to_string(),
+///         Language::Python,
+///         r#"
+///         print("Hello World!")
+///         "#
+///         .to_string(),
+///     ),
+///     Snippet::new(
+///         "Hello World in C".to_string(),
+///         Language::C,
+///         r#"
+///         #include <stdio.h>
+///
+///         int main() {
+///             printf("Hello World!");
+///             return 0;
+///         }
+///         "#
+///         .to_string(),
+///     ),
+///     Snippet::new(
+///         "Rust snippet".to_string(),
+///         Language::Rust,
+///         r#"
+///         fn main() {
+///             println!("Hello World!");
+///         }
+///         "#
+///         .to_string(),
+///     ),
+/// ],
+/// )
+/// ```
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct SnippetGroup {
     pub id: i64,
     title: String,
@@ -30,8 +75,9 @@ impl SnippetGroup {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, strum::EnumString)]
 pub enum Language {
+    All,
     Bash,
     Python,
     Rust,
@@ -51,16 +97,24 @@ pub enum Language {
     Css,
     Scala,
     Haskell,
+    Markdown,
 }
 
 impl Default for Language {
     fn default() -> Self {
-        Language::Python
+        Language::All
     }
 }
 
-// A snippet. a single file of code
-#[derive(Debug, Serialize, Deserialize, Default)]
+/// A snippet. a single file of code
+/// ```rust
+/// Snippet::new(
+///     "Hello World in py".to_string(),
+///     Language::Python,
+///     "print(\"Hello World!\")".to_string(),
+/// )
+/// ```
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct Snippet {
     pub id: i64,
     title: String,
@@ -79,49 +133,97 @@ impl Snippet {
     }
 }
 
+/// A collection of SnippetGroups queried directly from the database for ease of use and consistency.
+/// ```rust
+/// let db = SnippetCollection::init().await;
+/// db.filter(None, Some(Language::Python));
+/// ```
+
+#[derive(Debug, Clone)]
 pub struct SnippetCollection {
     pub coll: Collection<SnippetGroup>,
     pub snippet_groups: Vec<SnippetGroup>,
 }
 
+/// Collection of snippets from the database
+/// ```rust
+/// let snippet_collection = SnippetCollection::init().await;
+/// println!("{}", snippet_collection.snippet_groups.len());
+/// snippet_collection.update().await;
+/// ```
 impl SnippetCollection {
-    pub async fn init() -> Self {
-        let coll = db::get_db().await.collection::<SnippetGroup>("snippets");
-        let sgs = coll.find(None, None).await.unwrap();
-        let out = sgs.try_collect().await.unwrap();
+    /// Get the database.
+    pub async fn get_db() -> mongodb::error::Result<Database> {
+        let client = Client::with_uri_str("mongodb://127.0.0.1:27017").await?;
+        Ok(client.database("a_snippet_a_day"))
+    }
 
-        Self {
+    /// Initialize the collection
+    pub async fn init() -> mongodb::error::Result<Self> {
+        let coll = Self::get_db().await?.collection::<SnippetGroup>("snippets");
+        let sgs = coll.find(None, None).await?;
+        let out = sgs.try_collect().await?;
+
+        Ok(Self {
             coll,
             snippet_groups: out,
-        }
+        })
     }
 
-    pub async fn update(mut self) -> Self {
-        self.coll = db::get_db().await.collection::<SnippetGroup>("snippets");
-        let sgs = self.coll.find(None, None).await.unwrap();
-        self.snippet_groups = sgs.try_collect().await.unwrap();
+    /// Update the collection of a SnippetCollection Object.
+    /// ```rust
+    /// let snippet_collection = SnippetCollection::init().await;
+    /// // This syncs the collection of snippet_collection with the database.
+    /// snippet_collection.update().await.unwrap();
+    /// ```
+    pub async fn update(mut self) -> mongodb::error::Result<Self> {
+        self.coll = Self::get_db().await?.collection::<SnippetGroup>("snippets");
+        let sgs = self.coll.find(None, None).await?;
+        self.snippet_groups = sgs.try_collect().await?;
 
-        self
+        Ok(self)
     }
 
+    /// Insert a SnippetCollection Element into the Database.
+    /// ```rust
+    /// let snippet_collection = SnippetCollection::init().await;
+    /// let snippet_group = SnippetGroup::default();
+    /// snippet_collection.insert(snippet_group).await;
     pub async fn insert(&self, snippet_group: SnippetGroup) -> mongodb::error::Result<()> {
         self.coll.insert_one(snippet_group, None).await?;
         Ok(())
     }
 
-    pub fn filter(
-        &self,
-        mut sgs: Vec<SnippetGroup>,
-        id: Option<i64>,
-        lang: Option<Language>,
-    ) -> Vec<SnippetGroup> {
-        if let Some(id) = id {
-            sgs.retain(|sg| sg.id == id);
+    /// Filter the collection by id or lang (Both as option in first and second argument)
+    /// ```rust
+    /// let coll = SnippetCollection::init().await;
+    /// // This will return all snippets with id=1 **OR** lang=Python
+    /// coll.filter(Some(1), Some(Language::Python));
+    /// // This will return all snippets
+    /// coll.filter(None, None);
+    /// ```
+    pub fn filter(&self, id: Option<i64>, lang: Option<Vec<Language>>) -> Vec<SnippetGroup> {
+        if id.is_none() && lang.is_none() {
+            return self.snippet_groups.clone();
         }
-        if let Some(lang) = lang {
-            sgs.retain(|sg| sg.snippets.iter().any(|s| s.lang == lang));
+        let mut out: Vec<SnippetGroup> = Vec::new();
+        for sg in self.snippet_groups.iter() {
+            if let Some(id) = id {
+                if sg.id == id {
+                    out.push(sg.clone());
+                }
+            }
+            if let Some(langs) = lang.clone() {
+                for snippet in sg.snippets.iter() {
+                    for l in langs.iter() {
+                        if snippet.lang == l.clone() {
+                            out.push(sg.clone());
+                        }
+                    }
+                }
+            }
         }
 
-        sgs
+        out
     }
 }
